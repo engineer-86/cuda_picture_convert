@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Create Build Directory",
+      "type": "shell",
+      "command": "mkdir -p build && cd build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Generate Build Files",
+      "type": "shell",
+      "command": "cd build && cmake ..",
+      "group": "build"
+    },
+    {
+      "label": "Build Project",
+      "type": "shell",
+      "command": "cd build && make",
+      "group": "build"
+    },
+    {
+      "label": "Run cuda_test in CPU-mode",
+      "type": "shell",
+			"dependsOn": ["Build Project"],
+      "command": "${workspaceFolder}/build/cuda_test",
+      "args": ["${workspaceFolder}/pictures/harold.jpeg", "${workspaceFolder}/output/", "0"], // Adjust the arguments as needed
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Run cuda_test in GPU-mode",
+      "type": "shell",
+			"dependsOn": ["Build Project"],
+      "command": "${workspaceFolder}/build/cuda_test",
+      "args": ["${workspaceFolder}/pictures/harold.jpeg", "${workspaceFolder}/output/", "1"], // Adjust the arguments as needed
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}
