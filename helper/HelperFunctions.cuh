@@ -3,7 +3,6 @@
 //
 
 #include "../image-processing/ImageProcessor.cuh"
-#include "../open_cv/OpenCVFunctions.h"
 #include "../image-processing/ProcessingInfo.cuh"
 
 #ifndef CUDA_TEST_HELPERFUNTIONS_CUH
@@ -14,9 +13,9 @@ public:
     static void
     calcExecutionTimeImageProcessor(const ImageProcessor &imageProcessorTime, int trials, bool gpu_available);
 
-    static void calcExecutionTimeOpenCV(OpenCVFunctions &imageProcessorTimeCV, int trials);
-
     static void WriteSummaryToCSV(const std::vector<ProcessingInfo> &data, const std::string &csvFilePath);
+
+    static std::string HelperFunctions::getCurrentTimestamp();
 };
 
 #endif //CUDA_TEST_HELPERFUNTIONS_CUH

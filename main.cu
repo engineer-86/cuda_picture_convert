@@ -3,10 +3,8 @@
 #include "device/DeviceInfo.cuh"
 #include "image-processing/ImageProcessor.cuh"
 #include "device/DeviceInfo.cuh"
-#include "open_cv/OpenCVFunctions.h"
 #include "helper/HelperFunctions.cuh"
 #include "helper/GpuPowerMonitor.cuh"
-//#include "helper/GpuPowerMonitor.cuh"
 #include <cstdlib>
 #include<windows.h>
 
@@ -22,24 +20,23 @@ int main(int argc, char **argv) {
     const std::string &output_file_path = argv[2];
     int num_trials = atoi(argv[3]);
     ImageProcessor imageProcessor;
-    OpenCVFunctions openCvFunctions;
+
 
     std::vector<ProcessingInfo> processingInfos;
     GpuPowerMonitor gpuPowerMonitor;
-    int power = gpuPowerMonitor.getPowerUsage(0);
-    std::cout << power << std::endl;
+    float power = gpuPowerMonitor.getPowerUsage(0);
+    std::cout << "Initial Power: " << power << " Watts\n" << std::endl;
+    Sleep(3000);
 
     for (int run_id = 1; run_id <= num_trials; ++run_id) {
 
         imageProcessor.ProcessImageCUDA(input_picture_path, output_file_path,
                                         true, run_id, processingInfos);
-//        Sleep(3000);
 
-//        imageProcessor.ProcessImageCPU(input_picture_path, output_file_path,
-//                                       false, run_id, processingInfos);
-//
-//        openCvFunctions.ProcessImage(input_picture_path, output_file_path,
-//                                     processingInfos, run_id);
+        imageProcessor.ProcessImageCPU(input_picture_path, output_file_path,
+                                       false, run_id, processingInfos);
+
+
     }
     HelperFunctions::WriteSummaryToCSV(processingInfos, output_file_path + "summary.csv");
 

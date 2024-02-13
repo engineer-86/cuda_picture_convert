@@ -14,8 +14,9 @@ public:
     std::string technology;
     float time;
     float power;
+    std::string timestamp;
 
-    ProcessingInfo(int runId, const std::string &kind,
+    ProcessingInfo(int runId, std::string timestamp, const std::string &kind,
                    const std::string &technology,
                    double time, double power);
 };

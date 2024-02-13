@@ -28,8 +28,6 @@ add_executable(
         image-processing/ImageProcessorHelper.cuh
         host/HostSystem.cu
         host/HostSystem.cuh
-        open_cv/OpenCVFunctions.cpp
-        open_cv/OpenCVFunctions.h
         helper/HelperFunctions.cu
         helper/HelperFunctions.cuh
         image-processing/ProcessingInfo.cu

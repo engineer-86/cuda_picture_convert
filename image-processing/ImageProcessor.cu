@@ -10,6 +10,7 @@
 #include <opencv2/imgproc/types_c.h>
 #include "../host/HostSystem.cuh"
 #include "../helper/GpuPowerMonitor.cuh"
+#include "../helper/HelperFunctions.cuh"
 
 
 ImageProcessor::ImageProcessor() : total_time_blur_(0.0),
@@ -85,13 +86,6 @@ void ImageProcessor::ProcessImageCPU(const std::string &input_picture_path,
     this->SaveImage(output_picture_path, "blur", is_gpu_available);
 }
 
-/*
- * referring to the docs (RGB -> HSV pdf)
- * https://de.wikipedia.org/wiki/HSV-Farbraum
- */
-
-
-
 ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
     cv::Mat image = this->GetImage();
@@ -99,7 +93,6 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     int height = this->rows_;
     uchar3 *d_input;
     float3 *d_output;
-
 
 
     cudaMalloc(&d_input, width * height * sizeof(uchar3));
@@ -110,9 +103,10 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    GpuPowerMonitor gpuPowerMonitor;
-    float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
     auto start = std::chrono::high_resolution_clock::now();
+    GpuPowerMonitor gpuPowerMonitor;
+    float startPower = gpuPowerMonitor.getPowerUsage(0);
 
     ConvertRGBtoHSVKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
 
@@ -123,6 +117,9 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
     cudaGetLastError();
     cudaDeviceSynchronize();
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+    auto timestamp = HelperFunctions::getCurrentTimestamp();
+    float averagePower = (startPower + endPower) / 2.0f;
 
     cv::Mat hsv_image(height, width, CV_32FC3);
     cudaMemcpy(hsv_image.ptr<float>(0), d_output, width * height * sizeof(float3),
@@ -132,10 +129,9 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     cudaFree(d_output);
 
     this->image_hsv_ = hsv_image;
-    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
-    float averagePower = (startPower + endPower) / 2.0f;
 
-    return ProcessingInfo(runId, "hsv", "CUDA", duration, averagePower);
+
+    return ProcessingInfo(runId, timestamp, "hsv", "CUDA", duration, averagePower);
 }
 
 #include <chrono>
@@ -157,12 +153,13 @@ ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    GpuPowerMonitor gpuPowerMonitor;
-    float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
 
     auto start = std::chrono::high_resolution_clock::now();
+    GpuPowerMonitor gpuPowerMonitor;
+    float startPower = gpuPowerMonitor.getPowerUsage(0);
 
     AddBoxBlurKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
+
 
     auto finish = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(finish - start).count();
@@ -171,10 +168,11 @@ ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
 
     cudaGetLastError();
     cudaDeviceSynchronize();
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+    auto timestamp = HelperFunctions::getCurrentTimestamp();
+    float averagePower = (startPower + endPower) / 2.0f;
 
-    /* Types of colors in CV
-     * https://gist.github.com/yangcha/38f2fa630e223a8546f9b48ebbb3e61a
-     */
+
     cv::Mat blurred_image(height, width, CV_8UC3);
     cudaMemcpy(blurred_image.ptr<float>(0), d_output, width * height * sizeof(uchar3),
                cudaMemcpyDeviceToHost);
@@ -183,10 +181,9 @@ ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
     cudaFree(d_output);
 
     this->image_blur_ = blurred_image;
-    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
-    float averagePower = (startPower + endPower) / 2.0f;
 
-    return ProcessingInfo(runId, "blur", "CUDA", duration, averagePower);
+
+    return ProcessingInfo(runId, timestamp, "blur", "CUDA", duration, averagePower);
 
 }
 
@@ -202,14 +199,16 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVHost(int runId) {
     auto start = std::chrono::high_resolution_clock::now();
 
     ConvertRGBtoHSV(input.data(), output.data(), width, height);
-
+    auto timestamp = HelperFunctions::getCurrentTimestamp();
     auto finish = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(finish - start).count();
+
     this->AddTimeToCPUHSV(duration);
     this->SetTotalTimeHSV(duration);
 
+
     this->VectorToImage(output, "hsv");
-    return ProcessingInfo(runId, "hsv", "CPU", duration, 0.0);
+    return ProcessingInfo(runId, timestamp, "hsv", "CPU", duration, 0.0);
 }
 
 ProcessingInfo ImageProcessor::AddBoxBlurHost(int runId) {
@@ -223,14 +222,14 @@ ProcessingInfo ImageProcessor::AddBoxBlurHost(int runId) {
     auto start = std::chrono::high_resolution_clock::now();
 
     AddBoxBlur(input.data(), output.data(), width, height);
-
+    auto timestamp = HelperFunctions::getCurrentTimestamp();
     auto finish = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(finish - start).count();
 
     this->AddTimeToCPUBlur(duration);
     this->SetTotalTimeBlur(duration);
     this->VectorToImage(output, "blur");
-    return ProcessingInfo(runId, "blur", "CPU", duration, 0.0);
+    return ProcessingInfo(runId, timestamp, "blur", "CPU", duration, 0.0);
 }
 
 

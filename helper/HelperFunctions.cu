@@ -11,10 +11,10 @@ void HelperFunctions::WriteSummaryToCSV(const std::vector<ProcessingInfo> &data,
     std::ofstream csvFile;
     csvFile.open(csvFilePath);
 
-    csvFile << "ID(RUN),Mode,Technology,Times(s),Power(Watts)\n";
+    csvFile << "ID(RUN),Timestamp,Mode,Technology,Execution times(s),Power(Watts)\n";
 
     for (const auto &item: data) {
-        csvFile << item.runId << "," << item.kind << "," << item.technology <<
+        csvFile << item.runId << "," << item.timestamp << "," << item.kind << "," << item.technology <<
                 "," << std::fixed << std::setprecision(7) << item.time << "," << item.power << "\n";
     }
 
@@ -38,17 +38,18 @@ void HelperFunctions::calcExecutionTimeImageProcessor(const ImageProcessor &imag
     std::cout << average_duration_hsv + "\n" + average_duration_blur << std::endl;
 }
 
-void HelperFunctions::calcExecutionTimeOpenCV(OpenCVFunctions &imageProcessorTimeCV, int trials) {
-    std::string device = "OPENCV";
 
+std::string HelperFunctions::getCurrentTimestamp() {
 
-    std::string average_duration_hsv = "Average " + device + " duration for HSV: " +
-                                       std::to_string(imageProcessorTimeCV.getTotalTimeHSV() / trials) +
-                                       " Seconds";
+    auto now = std::chrono::system_clock::now();
 
-    std::string average_duration_blur = "Average " + device + " duration for BLUR: " +
-                                        std::to_string(imageProcessorTimeCV.getTotalTimeBlur() / trials) +
-                                        " Seconds";
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+    std::tm now_tm = *std::localtime(&now_c);
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
-    std::cout << average_duration_hsv + "\n" + average_duration_blur << std::endl;
-};
+    std::stringstream ss;
+    ss << std::put_time(&now_tm,
+                        "%H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
+
+    return ss.str();
+}
