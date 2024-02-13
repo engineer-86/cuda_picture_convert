@@ -6,6 +6,8 @@ set(CMAKE_CUDA_STANDARD 17)
 
 if (WIN32)
     set(OpenCV_DIR "C:/opencv/build/")
+    set(NVML_LIB_PATH "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/lib/x64/nvml.lib")
+
 elseif (UNIX AND NOT APPLE)
     set(OpenCV_DIR "/usr/local/lib/cmake/opencv4")
 endif ()
@@ -32,12 +34,15 @@ add_executable(
         helper/HelperFunctions.cuh
         image-processing/ProcessingInfo.cu
         image-processing/ProcessingInfo.cuh
+        helper/GpuPowerMonitor.cuh
+        helper/GpuPowerMonitor.cu
+
 )
 
 set_target_properties(cuda_test PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
 
-target_link_libraries(cuda_test PUBLIC ${OpenCV_LIBS})
+target_link_libraries(cuda_test PUBLIC ${OpenCV_LIBS} ${NVML_LIB_PATH})
 if (OpenMP_CXX_FOUND)
     target_link_libraries(cuda_test PUBLIC OpenMP::OpenMP_CXX)
 endif ()

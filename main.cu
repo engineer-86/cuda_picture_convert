@@ -5,6 +5,8 @@
 #include "device/DeviceInfo.cuh"
 #include "open_cv/OpenCVFunctions.h"
 #include "helper/HelperFunctions.cuh"
+#include "helper/GpuPowerMonitor.cuh"
+//#include "helper/GpuPowerMonitor.cuh"
 #include <cstdlib>
 
 int main(int argc, char **argv) {
@@ -17,7 +19,11 @@ int main(int argc, char **argv) {
     int num_trials = atoi(argv[3]);
     ImageProcessor imageProcessor;
     OpenCVFunctions openCvFunctions;
+
     std::vector<ProcessingInfo> processingInfos;
+    GpuPowerMonitor gpuPowerMonitor;
+    int power = gpuPowerMonitor.getPowerUsage(0);
+    std::cout << power << std::endl;
 
     for (int run_id = 1; run_id <= num_trials; ++run_id) {
         imageProcessor.ProcessImageCUDA(input_picture_path, output_file_path,

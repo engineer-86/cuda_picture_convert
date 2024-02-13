@@ -30,7 +30,12 @@ void ImageProcessor::LoadImage(const std::string &file_name) {
     rows_ = image_rgb_.rows;
     columns_ = image_rgb_.cols;
 }
-
+/***
+ *
+ * @param file_path
+ * @param output_kind
+ * @param mode
+ */
 void ImageProcessor::SaveImage(const std::string &file_path, const std::string &output_kind, bool mode) {
     std::string calc_mode = mode ? "cuda" : "cpu";
 
