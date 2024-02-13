@@ -4,26 +4,18 @@
 
 #include <algorithm>
 #include "HostSystem.cuh"
+#include "../helper/HelperFunctions.cuh"
 #include <cmath>
 #include <omp.h>
 #include <iostream>
 
 
 __host__ void ConvertRGBtoHSV(uchar3 *input, float3 *output, int width, int height) {
-    omp_set_dynamic(0);
-    omp_set_num_threads(20);
+
 
 #pragma omp parallel for
     for (int y = 0; y < height; ++y) {
 
-        int threadID = omp_get_thread_num();
-#pragma omp critical
-        {
-            static int numThreadsReported = 0;
-            if (numThreadsReported++ < omp_get_num_threads()) {
-                printf("Thread-ID: %d from %d Threads \n", threadID, omp_get_num_threads());
-            }
-        }
         for (int x = 0; x < width; ++x) {
             unsigned int idx = y * width + x;
             uchar3 rgb = input[idx];
@@ -63,20 +55,11 @@ __host__ void ConvertRGBtoHSV(uchar3 *input, float3 *output, int width, int heig
 
 __host__ void AddBoxBlur(uchar3 *input, uchar3 *output, int width, int height) {
     int blurRadius = 10;
-    omp_set_dynamic(0);
-    omp_set_num_threads(20);
+
 
 #pragma omp parallel for
     for (int y = 0; y < height; y++) {
 
-        int threadID = omp_get_thread_num();
-#pragma omp critical
-        {
-            static int numThreadsReported = 0;
-            if (numThreadsReported++ < omp_get_num_threads()) {
-                printf("Thread-ID: %d from %d Threads \n", threadID, omp_get_num_threads());
-            }
-        }
         for (int x = 0; x < width; x++) {
             unsigned int idx = y * width + x;
 

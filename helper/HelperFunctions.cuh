@@ -16,6 +16,8 @@ public:
     static void WriteSummaryToCSV(const std::vector<ProcessingInfo> &data, const std::string &csvFilePath);
 
     static std::string HelperFunctions::getCurrentTimestamp();
+    static void HelperFunctions::showAvailableOmpThreads();
+    static void HelperFunctions::setOmpThreads(int num_threads);
 };
 
 #endif //CUDA_TEST_HELPERFUNTIONS_CUH

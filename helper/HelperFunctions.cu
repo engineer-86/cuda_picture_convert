@@ -6,6 +6,7 @@
 #include <fstream>
 #include <fstream>
 #include <iomanip>
+#include <omp.h>
 
 void HelperFunctions::WriteSummaryToCSV(const std::vector<ProcessingInfo> &data, const std::string &csvFilePath) {
     std::ofstream csvFile;
@@ -52,4 +53,18 @@ std::string HelperFunctions::getCurrentTimestamp() {
                         "%H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
 
     return ss.str();
+}
+
+void HelperFunctions::setOmpThreads(int num_threads) {
+    if (num_threads > 0) {
+        omp_set_dynamic(0);
+        omp_set_num_threads(num_threads);
+    } else {
+        omp_set_dynamic(1);
+    }
+}
+
+void HelperFunctions::showAvailableOmpThreads() {
+    int num_threads = omp_get_max_threads();
+    std::cout << "Possible OpenMP-Threads: " << num_threads << std::endl;
 }
