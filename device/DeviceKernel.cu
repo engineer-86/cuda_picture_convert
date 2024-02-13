@@ -49,7 +49,7 @@ __global__ void ConvertRGBtoHSVKernel(uchar3 *input, float3 *output, int width, 
 }
 
 __global__ void AddBoxBlurKernel(uchar3 *input, uchar3 *output, int width, int height) {
-    int blurRadius = 10;
+    int blurRadius = 2;
 
     unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;

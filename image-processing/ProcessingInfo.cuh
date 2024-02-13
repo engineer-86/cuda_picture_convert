@@ -12,8 +12,8 @@ public:
     int runId;
     std::string kind;
     std::string technology;
-    double time;
-    double power;
+    float time;
+    float power;
 
     ProcessingInfo(int runId, const std::string &kind,
                    const std::string &technology,

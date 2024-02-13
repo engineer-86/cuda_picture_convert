@@ -30,12 +30,13 @@ int main(int argc, char **argv) {
     std::cout << power << std::endl;
 
     for (int run_id = 1; run_id <= num_trials; ++run_id) {
+
         imageProcessor.ProcessImageCUDA(input_picture_path, output_file_path,
                                         true, run_id, processingInfos);
-        Sleep(1000);
+//        Sleep(3000);
 
-        imageProcessor.ProcessImageCPU(input_picture_path, output_file_path,
-                                       false, run_id, processingInfos);
+//        imageProcessor.ProcessImageCPU(input_picture_path, output_file_path,
+//                                       false, run_id, processingInfos);
 //
 //        openCvFunctions.ProcessImage(input_picture_path, output_file_path,
 //                                     processingInfos, run_id);

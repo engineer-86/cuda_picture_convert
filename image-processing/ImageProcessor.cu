@@ -30,12 +30,7 @@ void ImageProcessor::LoadImage(const std::string &file_name) {
     columns_ = image_rgb_.cols;
 }
 
-/***
- *
- * @param file_path
- * @param output_kind
- * @param mode
- */
+
 void ImageProcessor::SaveImage(const std::string &file_path, const std::string &output_kind, bool mode) {
     std::string calc_mode = mode ? "cuda" : "cpu";
 
@@ -98,16 +93,17 @@ void ImageProcessor::ProcessImageCPU(const std::string &input_picture_path,
 
 
 ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
+
     cv::Mat image = this->GetImage();
     int width = this->columns_;
     int height = this->rows_;
-
     uchar3 *d_input;
     float3 *d_output;
 
+
+
     cudaMalloc(&d_input, width * height * sizeof(uchar3));
     cudaMalloc(&d_output, width * height * sizeof(float3));
-
     cudaMemcpy(d_input, image.ptr<uchar>(0), width * height * sizeof(uchar3),
                cudaMemcpyHostToDevice);
 
@@ -115,108 +111,83 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
     GpuPowerMonitor gpuPowerMonitor;
-
-
     float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-
-    cudaEventRecord(start, 0);
-
+    auto start = std::chrono::high_resolution_clock::now();
 
     ConvertRGBtoHSVKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
 
+    auto finish = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(finish - start).count();
+    this->AddTimeToCUDAHSV(duration);
+    this->SetTotalTimeHSV(duration);
 
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-
-    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-
-    cudaFree(d_input);
-    cudaFree(d_output);
+    cudaGetLastError();
+    cudaDeviceSynchronize();
 
     cv::Mat hsv_image(height, width, CV_32FC3);
     cudaMemcpy(hsv_image.ptr<float>(0), d_output, width * height * sizeof(float3),
                cudaMemcpyDeviceToHost);
 
+    cudaFree(d_input);
+    cudaFree(d_output);
+
     this->image_hsv_ = hsv_image;
-
-
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
     float averagePower = (startPower + endPower) / 2.0f;
 
-    return ProcessingInfo(runId, "hsv", "CUDA", milliseconds / 1000.0, averagePower);
+    return ProcessingInfo(runId, "hsv", "CUDA", duration, averagePower);
 }
 
+#include <chrono>
+
+
 ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
+
     cv::Mat image = this->GetImage();
     int width = this->columns_;
     int height = this->rows_;
-
     uchar3 *d_input;
     uchar3 *d_output;
 
     cudaMalloc(&d_input, width * height * sizeof(uchar3));
     cudaMalloc(&d_output, width * height * sizeof(uchar3));
-
-    cudaMemcpy(d_input, image.ptr<uchar>(0), width * height * sizeof(uchar3), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_input, image.ptr<uchar>(0), width * height * sizeof(uchar3),
+               cudaMemcpyHostToDevice);
 
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
     GpuPowerMonitor gpuPowerMonitor;
-
-
     float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-
-    cudaEventRecord(start, 0);
-
+    auto start = std::chrono::high_resolution_clock::now();
 
     AddBoxBlurKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
 
+    auto finish = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(finish - start).count();
+    this->AddTimeToCUDABlur(duration);
+    this->SetTotalTimeBlur(duration);
 
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
+    cudaGetLastError();
+    cudaDeviceSynchronize();
 
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-
-    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
-
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    /* Types of colors in CV
+     * https://gist.github.com/yangcha/38f2fa630e223a8546f9b48ebbb3e61a
+     */
+    cv::Mat blurred_image(height, width, CV_8UC3);
+    cudaMemcpy(blurred_image.ptr<float>(0), d_output, width * height * sizeof(uchar3),
+               cudaMemcpyDeviceToHost);
 
     cudaFree(d_input);
     cudaFree(d_output);
 
-    cv::Mat blurred_image(height, width, CV_8UC3);
-    cudaMemcpy(blurred_image.ptr<uchar>(0), d_output, width * height * sizeof(uchar3), cudaMemcpyDeviceToHost);
-
     this->image_blur_ = blurred_image;
-
-
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
     float averagePower = (startPower + endPower) / 2.0f;
 
+    return ProcessingInfo(runId, "blur", "CUDA", duration, averagePower);
 
-    double durationSeconds = milliseconds / 1000.0;
-
-    return ProcessingInfo(runId, "blur", "CUDA", durationSeconds, averagePower);
 }
 
 
@@ -272,6 +243,7 @@ std::vector<uchar3> ImageProcessor::ImageToVector() {
     std::vector<uchar3> input(width * height);
 
     // convert mat-pic to cv vector with 2 nested for loops
+
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; x++) {
             cv::Vec3b pixel = image.at<cv::Vec3b>(y, x);

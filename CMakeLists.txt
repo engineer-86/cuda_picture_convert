@@ -45,8 +45,14 @@ set_target_properties(cuda_test PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(cuda_test PUBLIC ${OpenCV_LIBS} ${NVML_LIB_PATH})
+
 if (OpenMP_CXX_FOUND)
     target_link_libraries(cuda_test PUBLIC OpenMP::OpenMP_CXX)
+    if (UNIX)
+        target_compile_options(cuda_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp>)
+    elseif (WIN32)
+        target_compile_options(cuda_test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler /openmp>)
+    endif ()
 endif ()
 
 if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
