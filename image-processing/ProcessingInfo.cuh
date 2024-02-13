@@ -13,10 +13,11 @@ public:
     std::string kind;
     std::string technology;
     double time;
+    double power;
 
     ProcessingInfo(int runId, const std::string &kind,
                    const std::string &technology,
-                   double time);
+                   double time, double power);
 };
 
 #endif // CUDA_TEST_PROCESSINGINFO_CUH

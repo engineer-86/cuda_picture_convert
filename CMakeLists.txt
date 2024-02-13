@@ -36,6 +36,8 @@ add_executable(
         image-processing/ProcessingInfo.cuh
         helper/GpuPowerMonitor.cuh
         helper/GpuPowerMonitor.cu
+        helper/GpuPowerMonitorThread.cu
+        helper/GpuPowerMonitorThread.cuh
 
 )
 

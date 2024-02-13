@@ -3,14 +3,13 @@
 //
 
 #include "ImageProcessor.cuh"
-#include <opencv2/opencv.hpp>
 #include <iostream>
 #include "../device/DeviceKernel.cuh"
 #include <chrono>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/types_c.h>
-#include <opencv2/imgproc/imgproc.hpp>
 #include "../host/HostSystem.cuh"
+#include "../helper/GpuPowerMonitor.cuh"
 
 
 ImageProcessor::ImageProcessor() : total_time_blur_(0.0),
@@ -30,6 +29,7 @@ void ImageProcessor::LoadImage(const std::string &file_name) {
     rows_ = image_rgb_.rows;
     columns_ = image_rgb_.cols;
 }
+
 /***
  *
  * @param file_path
@@ -91,9 +91,12 @@ void ImageProcessor::ProcessImageCPU(const std::string &input_picture_path,
 }
 
 /*
- * referring to the docs of teacher (RGB -> HSV pdf)
+ * referring to the docs (RGB -> HSV pdf)
  * https://de.wikipedia.org/wiki/HSV-Farbraum
  */
+
+
+
 ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     cv::Mat image = this->GetImage();
     int width = this->columns_;
@@ -111,29 +114,111 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    auto start = std::chrono::high_resolution_clock::now();
+    GpuPowerMonitor gpuPowerMonitor;
+
+
+    float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+
+    cudaEventRecord(start, 0);
+
 
     ConvertRGBtoHSVKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
 
-    auto finish = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(finish - start).count();
-    this->AddTimeToCUDAHSV(duration);
-    this->SetTotalTimeHSV(duration);
 
-    cudaGetLastError();
-    cudaDeviceSynchronize();
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    cudaFree(d_input);
+    cudaFree(d_output);
 
     cv::Mat hsv_image(height, width, CV_32FC3);
     cudaMemcpy(hsv_image.ptr<float>(0), d_output, width * height * sizeof(float3),
                cudaMemcpyDeviceToHost);
 
+    this->image_hsv_ = hsv_image;
+
+
+    float averagePower = (startPower + endPower) / 2.0f;
+
+    return ProcessingInfo(runId, "hsv", "CUDA", milliseconds / 1000.0, averagePower);
+}
+
+ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
+    cv::Mat image = this->GetImage();
+    int width = this->columns_;
+    int height = this->rows_;
+
+    uchar3 *d_input;
+    uchar3 *d_output;
+
+    cudaMalloc(&d_input, width * height * sizeof(uchar3));
+    cudaMalloc(&d_output, width * height * sizeof(uchar3));
+
+    cudaMemcpy(d_input, image.ptr<uchar>(0), width * height * sizeof(uchar3), cudaMemcpyHostToDevice);
+
+    dim3 blockSize(32, 32);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    GpuPowerMonitor gpuPowerMonitor;
+
+
+    float startPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+
+    cudaEventRecord(start, 0);
+
+
+    AddBoxBlurKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
+
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+
+    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
     cudaFree(d_input);
     cudaFree(d_output);
 
-    this->image_hsv_ = hsv_image;
+    cv::Mat blurred_image(height, width, CV_8UC3);
+    cudaMemcpy(blurred_image.ptr<uchar>(0), d_output, width * height * sizeof(uchar3), cudaMemcpyDeviceToHost);
 
-    return ProcessingInfo(runId, "hsv", "CUDA", duration);
+    this->image_blur_ = blurred_image;
+
+
+    float averagePower = (startPower + endPower) / 2.0f;
+
+
+    double durationSeconds = milliseconds / 1000.0;
+
+    return ProcessingInfo(runId, "blur", "CUDA", durationSeconds, averagePower);
 }
+
 
 ProcessingInfo ImageProcessor::ConvertRGBtoHSVHost(int runId) {
     cv::Mat image = this->GetImage();
@@ -153,50 +238,7 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVHost(int runId) {
     this->SetTotalTimeHSV(duration);
 
     this->VectorToImage(output, "hsv");
-    return ProcessingInfo(runId, "hsv", "CPU", duration);
-}
-
-ProcessingInfo ImageProcessor::AddBoxBlurCuda(int runId) {
-    cv::Mat image = this->GetImage();
-    int width = this->columns_;
-    int height = this->rows_;
-
-    uchar3 *d_input;
-    uchar3 *d_output;
-
-    cudaMalloc(&d_input, width * height * sizeof(uchar3));
-    cudaMalloc(&d_output, width * height * sizeof(uchar3));
-
-    cudaMemcpy(d_input, image.ptr<uchar>(0), width * height * sizeof(uchar3),
-               cudaMemcpyHostToDevice);
-
-    dim3 blockSize(32, 32);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    AddBoxBlurKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(finish - start).count();
-    this->AddTimeToCUDABlur(duration);
-    this->SetTotalTimeBlur(duration);
-
-    cudaGetLastError();
-    cudaDeviceSynchronize();
-
-    // https://gist.github.com/yangcha/38f2fa630e223a8546f9b48ebbb3e61a
-
-    cv::Mat blurred_image(height, width, CV_8UC3);
-    cudaMemcpy(blurred_image.ptr<float>(0), d_output, width * height * sizeof(uchar3),
-               cudaMemcpyDeviceToHost);
-
-    cudaFree(d_input);
-    cudaFree(d_output);
-
-    this->image_blur_ = blurred_image;
-    return ProcessingInfo(runId, "blur", "CUDA", duration);
-
+    return ProcessingInfo(runId, "hsv", "CPU", duration, 0.0);
 }
 
 ProcessingInfo ImageProcessor::AddBoxBlurHost(int runId) {
@@ -217,8 +259,9 @@ ProcessingInfo ImageProcessor::AddBoxBlurHost(int runId) {
     this->AddTimeToCPUBlur(duration);
     this->SetTotalTimeBlur(duration);
     this->VectorToImage(output, "blur");
-    return ProcessingInfo(runId, "blur", "CPU", duration);
+    return ProcessingInfo(runId, "blur", "CPU", duration, 0.0);
 }
+
 
 std::vector<uchar3> ImageProcessor::ImageToVector() {
     cv::Mat image = this->GetImage();
@@ -228,7 +271,7 @@ std::vector<uchar3> ImageProcessor::ImageToVector() {
     // input and output vectors
     std::vector<uchar3> input(width * height);
 
-    // convert mat-pic to cv vector
+    // convert mat-pic to cv vector with 2 nested for loops
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; x++) {
             cv::Vec3b pixel = image.at<cv::Vec3b>(y, x);

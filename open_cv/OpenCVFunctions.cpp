@@ -24,7 +24,7 @@ ProcessingInfo OpenCVFunctions::rgbToBlurOpenCV(int runId) {
     this->AddTimeToBlur(duration);
     //   this->SetTotalTimeBlur(duration);
 
-    return ProcessingInfo(runId, "blur", "OPENCV", duration);
+    return ProcessingInfo(runId, "blur", "OPENCV", duration,0.0);
 }
 
 ProcessingInfo OpenCVFunctions::rgbToHsvOpenCV(int runId) {
@@ -35,7 +35,7 @@ ProcessingInfo OpenCVFunctions::rgbToHsvOpenCV(int runId) {
     this->AddTimeToHSV(duration);
     //  this->SetTotalTimeHSV(duration);
 
-    return ProcessingInfo(runId, "hsv", "OPENCV", duration);
+    return ProcessingInfo(runId, "hsv", "OPENCV", duration,0.0);
 }
 
 void OpenCVFunctions::SetTotalTime(double total_time) {

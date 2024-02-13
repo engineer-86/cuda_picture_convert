@@ -11,11 +11,11 @@ void HelperFunctions::WriteSummaryToCSV(const std::vector<ProcessingInfo> &data,
     std::ofstream csvFile;
     csvFile.open(csvFilePath);
 
-    csvFile << "ID(RUN),Mode,Technology,Times(s)\n";
+    csvFile << "ID(RUN),Mode,Technology,Times(s),Power(Watts)\n";
 
     for (const auto &item: data) {
         csvFile << item.runId << "," << item.kind << "," << item.technology <<
-                "," << std::fixed << std::setprecision(7) << item.time << "\n";
+                "," << std::fixed << std::setprecision(7) << item.time << "," << item.power << "\n";
     }
 
     csvFile.close();

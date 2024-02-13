@@ -6,6 +6,7 @@
 #include "HostSystem.cuh"
 #include <cmath>
 
+
 __host__ void ConvertRGBtoHSV(uchar3 *input, float3 *output, int width, int height) {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {

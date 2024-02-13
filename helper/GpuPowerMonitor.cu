@@ -39,5 +39,5 @@ float GpuPowerMonitor::getPowerUsage(unsigned int gpuIndex) const {
                                  std::string(nvmlErrorString(result)));
     }
 
-    return (float)power / 1000.0f;
+    return (float) power / 1000.0f;
 }

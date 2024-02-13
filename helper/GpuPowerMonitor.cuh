@@ -21,10 +21,6 @@ private:
     void initNVML();
 
     void shutdownNVML();
-//
-//    unsigned int *power;
-//    nvmlDevice_t *device;
-
 
 };
 
