@@ -11,6 +11,7 @@
 #include "../host/HostSystem.cuh"
 #include "../helper/GpuPowerMonitor.cuh"
 #include "../helper/HelperFunctions.cuh"
+#include "../helper/GpuPowerMonitorThread.cuh"
 
 
 ImageProcessor::ImageProcessor() : total_time_blur_(0.0),
@@ -105,10 +106,12 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
 
     auto start = std::chrono::high_resolution_clock::now();
-    GpuPowerMonitor gpuPowerMonitor;
-    float startPower = gpuPowerMonitor.getPowerUsage(0);
+    GpuPowerMonitorThread gpuPowerMonitorThread;
+    gpuPowerMonitorThread.startMonitoring();
 
     ConvertRGBtoHSVKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
+
+    gpuPowerMonitorThread.stopMonitoring();
 
     auto finish = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(finish - start).count();
@@ -117,9 +120,7 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
     cudaGetLastError();
     cudaDeviceSynchronize();
-    float endPower = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
     auto timestamp = HelperFunctions::getCurrentTimestamp();
-    float averagePower = (startPower + endPower) / 2.0f;
 
     cv::Mat hsv_image(height, width, CV_32FC3);
     cudaMemcpy(hsv_image.ptr<float>(0), d_output, width * height * sizeof(float3),

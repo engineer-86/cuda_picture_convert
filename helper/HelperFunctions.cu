@@ -4,12 +4,13 @@
 
 #include "HelperFunctions.cuh"
 #include <fstream>
-#include <fstream>
 #include <iomanip>
 #include <omp.h>
+#include "GpuPowerMonitorThread.cuh"
 
 void HelperFunctions::WriteSummaryToCSV(const std::vector<ProcessingInfo> &data, const std::string &csvFilePath) {
     std::ofstream csvFile;
+    //TODO: implement output from power vector by GpuPowerMonitorThread class
     csvFile.open(csvFilePath);
 
     csvFile << "ID(RUN),Timestamp,Mode,Technology,Execution times(s),Power(Watts)\n";
