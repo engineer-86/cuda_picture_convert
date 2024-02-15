@@ -6,7 +6,7 @@ set(CMAKE_CUDA_STANDARD 17)
 
 if (WIN32)
     set(OpenCV_DIR "C:/opencv/build/")
-    set(NVML_LIB_PATH "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/lib/x64/nvml.lib")
+    set(NVML_LIB_PATH "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.3/lib/x64/nvml.lib")
 
 elseif (UNIX AND NOT APPLE)
     set(OpenCV_DIR "/usr/local/lib/cmake/opencv4")
