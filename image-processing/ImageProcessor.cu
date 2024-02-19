@@ -105,21 +105,39 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
 
-    auto start = std::chrono::high_resolution_clock::now();
+    cudaEvent_t start, stop;
+    float duration;
+
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord( start, 0 );
+
+    auto start_time = std::chrono::high_resolution_clock::now();
     GpuPowerMonitorThread gpuPowerMonitorThread;
     gpuPowerMonitorThread.startMonitoring();
 
+    // 8.1.2. Using CUDA GPU Timers
+    // https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
+
     ConvertRGBtoHSVKernel<<<gridSize, blockSize>>>(d_input, d_output, width, height);
 
-    gpuPowerMonitorThread.stopMonitoring();
+    cudaEventRecord( stop, 0 );
+    cudaEventSynchronize( stop );
+    cudaEventElapsedTime(&duration, start, stop );
+    cudaEventDestroy( start );
+    cudaEventDestroy( stop );
 
     auto finish = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(finish - start).count();
+
     this->AddTimeToCUDAHSV(duration);
     this->SetTotalTimeHSV(duration);
 
     cudaGetLastError();
     cudaDeviceSynchronize();
+    // stop power measure thread
+    gpuPowerMonitorThread.stopMonitoring();
+
+
     auto timestamp = HelperFunctions::getCurrentTimestamp();
 
     cv::Mat hsv_image(height, width, CV_32FC3);
@@ -128,15 +146,12 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
     cudaFree(d_input);
     cudaFree(d_output);
+
     this->image_hsv_ = hsv_image;
     auto powers = gpuPowerMonitorThread.getPowerReadings();
 
-    for (auto &power: powers) {
-        std::cout << power << "WATTS";
-
-    }
-
-    return ProcessingInfo(runId, timestamp, "hsv", "CUDA", duration, gpuPowerMonitorThread.getPowerReadings());
+    return ProcessingInfo(runId, timestamp, "hsv", "CUDA", duration,
+                          gpuPowerMonitorThread.getPowerReadings());
 }
 
 #include <chrono>

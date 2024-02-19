@@ -29,7 +29,9 @@ void GpuPowerMonitorThread::monitorFunction() {
     GpuPowerMonitor gpuPowerMonitor;
 
     while (!stopSignal) {
+
         float powerUsage = gpuPowerMonitor.getPowerUsage(0); // GPU-Index 0
+
         {
             std::lock_guard<std::mutex> lock(readingsMutex);
             powerReadings.push_back(powerUsage);
