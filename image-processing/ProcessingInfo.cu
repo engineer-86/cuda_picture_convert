@@ -4,6 +4,7 @@
 
 
 
+#include <vector>
 #include "ProcessingInfo.cuh"
 
 ProcessingInfo::ProcessingInfo(int runId, std::string timestamp, const std::string &kind, const std::string &technology,
@@ -12,3 +13,8 @@ ProcessingInfo::ProcessingInfo(int runId, std::string timestamp, const std::stri
         : runId(runId), timestamp(timestamp), kind(kind), technology(technology), time(time), power(power) {
 }
 
+ProcessingInfo::ProcessingInfo(int runId, std::string timestamp, const std::string &kind, const std::string &technology,
+                               double time,
+                               std::vector<float> )
+        : runId(runId), timestamp(timestamp), kind(kind), technology(technology), time(time), power(power) {
+}

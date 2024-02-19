@@ -19,6 +19,11 @@ public:
     ProcessingInfo(int runId, std::string timestamp, const std::string &kind,
                    const std::string &technology,
                    double time, double power);
+
+    ProcessingInfo::ProcessingInfo(int runId, std::string timestamp, const std::string &kind,
+                                   const std::string &technology,
+                                   double time,
+                                   std::vector<float>);
 };
 
 #endif // CUDA_TEST_PROCESSINGINFO_CUH

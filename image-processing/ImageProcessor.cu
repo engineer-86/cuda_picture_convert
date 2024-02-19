@@ -128,11 +128,15 @@ ProcessingInfo ImageProcessor::ConvertRGBtoHSVCuda(int runId) {
 
     cudaFree(d_input);
     cudaFree(d_output);
-
     this->image_hsv_ = hsv_image;
+    auto powers = gpuPowerMonitorThread.getPowerReadings();
 
+    for (auto &power: powers) {
+        std::cout << power << "WATTS";
 
-    return ProcessingInfo(runId, timestamp, "hsv", "CUDA", duration, averagePower);
+    }
+
+    return ProcessingInfo(runId, timestamp, "hsv", "CUDA", duration, gpuPowerMonitorThread.getPowerReadings());
 }
 
 #include <chrono>
